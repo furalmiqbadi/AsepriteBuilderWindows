@@ -105,13 +105,38 @@ jobs:
         working-directory: aseprite/build
         run: ninja aseprite
 
+      - name: Buat Installer (.exe) menggunakan Inno Setup
+        shell: pwsh
+        run: |
+          $issContent = @"
+          [Setup]
+          AppName=Aseprite
+          AppVersion=${{ steps.latest.outputs.tag }}
+          DefaultDirName={autopf}\Aseprite
+          DefaultGroupName=Aseprite
+          UninstallDisplayIcon={app}\aseprite.exe
+          Compression=lzma2
+          SolidCompression=yes
+          OutputDir=$env:GITHUB_WORKSPACE
+          OutputBaseFilename=Aseprite-${{ steps.latest.outputs.tag }}-Setup
+
+          [Files]
+          Source: "$env:GITHUB_WORKSPACE\aseprite\build\bin\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+          [Icons]
+          Name: "{group}\Aseprite"; Filename: "{app}\aseprite.exe"
+          Name: "{autodesktop}\Aseprite"; Filename: "{app}\aseprite.exe"
+          "@
+          Set-Content -Path setup.iss -Value $issContent -Encoding utf8
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" setup.iss
+
       - name: Jadikan portable
         working-directory: aseprite/build/bin
         shell: pwsh
         run: |
           Set-Content -Path aseprite.ini -Value '# portable' -Encoding utf8
 
-      - name: Kemasi ZIP
+      - name: Kemasi ZIP (Portable)
         shell: pwsh
         run: |
           $zipName = "Aseprite-${{ steps.latest.outputs.tag }}-Windows-x64.zip"
@@ -126,5 +151,6 @@ jobs:
           name: "Aseprite ${{ steps.latest.outputs.tag }} (Windows x64)"
           files: |
             Aseprite-${{ steps.latest.outputs.tag }}-Windows-x64.zip
+            Aseprite-${{ steps.latest.outputs.tag }}-Setup.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
